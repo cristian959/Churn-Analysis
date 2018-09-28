@@ -225,3 +225,41 @@ q = ggplot(lift, aes(x=label, y=score))+
 
 print(q)
 
+# Conclusions
+# 1.- Aggregate_Total_Rev is the best metric to show fidelity, and it has an inverse relation with Churn. 
+#  That suggest that main customers are satisfied
+# 2.- Aggregate_SMS_Rev has a direct relation with Churn, that suggests that these customers who use an old technology like SMS 
+#  are not satisfied with the price they are paying.
+# 3.- The same situation is the same with Aggregate_Data_Rev which has a direct relation with Churn. 
+# Perhaps an expensive price for they are receiving.
+# 4.- There is no colinearity into model because none correlations between main variable are over 75%
+# 5.- network_age has a inverse relation that suggest that customers with more antiquity use stay at the company
+
+
+var_rf <- varImp(model.rf, scale = FALSE)
+var_rf
+plot(var_rf, top = 20)
+
+explained_model = step(glm(ChurnNum ~.,data = db_train %>% 
+                             select(-Class, -starts_with("sep"),-starts_with("aug")),
+                           family=binomial(link='logit')), 
+                       direction="both")
+
+summary(explained_model)
+
+#We plot the correlation matrix of the variables
+correlations <- db_train %>% 
+  select(-Class, -starts_with("sep"),-starts_with("aug")) %>% cor()
+
+highcorr <- findCorrelation(correlations, cutoff = .75)
+correlations[,highcorr]
+
+pred_explained = predict(object=explained_model, db_test %>% select(-Class, -starts_with("sep"),-starts_with("aug")),
+                         type='response')
+
+new_test = db_test %>% select(-Class, -starts_with("sep"),-starts_with("aug"))
+
+roc_explained = roc.curve(response = new_test$ChurnNum, pred_explained, 
+                          col = "#ef0a30", add.roc=TRUE)
+roc_explained
+
